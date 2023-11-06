@@ -29,14 +29,39 @@ void Router::add_route(const uint32_t route_prefix,
     cerr << "DEBUG: adding route " << Address::from_ipv4_numeric(route_prefix).ip() << "/" << int(prefix_length)
          << " => " << (next_hop.has_value() ? next_hop->ip() : "(direct)") << " on interface " << interface_num << "\n";
 
-    DUMMY_CODE(route_prefix, prefix_length, next_hop, interface_num);
     // Your code here.
+    _routes.insert({route_prefix, prefix_length, next_hop, interface_num});
 }
 
 //! \param[in] dgram The datagram to be routed
 void Router::route_one_datagram(InternetDatagram &dgram) {
-    DUMMY_CODE(dgram);
-    // Your code here.
+    const Route* route = nullptr;
+    // 1.路由器在路由表中查找数据报目的地址匹配的路由，即目的地址的最长prefix_length与route_prefix的最长prefix_length相同。
+    // 2.在匹配的路由中，路由器选择prefix_length最长的路由。
+    for (auto &item : _routes){
+        //这里如果prefix_length为0，那么左移时会出现bug（左移size超过类型大小），所以需要特殊处理
+        uint32_t ip = item.prefix_length == 0 ? 0 : (dgram.header().dst>>(32-item.prefix_length))<<(32-item.prefix_length);
+        if(ip==item.route_prefix){
+            route = &item;
+            break;
+        }
+    }
+    // 3.如果没有匹配的路由，则丢弃该数据报。
+    if(route == nullptr){
+        return;
+    }
+    // 4.路由器减少数据报的TTL（存活时间）。如果TTL已经为零，或者在减少之后达到零，路由器应该丢弃数据报。
+    if(dgram.header().ttl <= 1){
+        return;
+    }
+    dgram.header().ttl--;
+    // 5.否则，路由器将修改后的数据报从接口发送到适当的下一跳（interface(interface_num).send_datagram()）。
+    if(route->next_hop.has_value()){
+        interface(route->interface_num).send_datagram(dgram, route->next_hop.value());
+    }
+    else{
+        interface(route->interface_num).send_datagram(dgram, Address::from_ipv4_numeric(dgram.header().dst));
+    }
 }
 
 void Router::route() {

@@ -12,42 +12,102 @@ void DUMMY_CODE(Targs &&... /* unused */) {}
 
 using namespace std;
 
-ByteStream::ByteStream(const size_t capacity) { DUMMY_CODE(capacity); }
+ByteStream::ByteStream(const size_t capacity) :
+    _capacity(capacity), _buffer(nullptr), _write_index(0), _read_index(0), _input_ended(false) {
+    _buffer = new byte[_capacity];
+}
+
+ByteStream::ByteStream(const ByteStream &another) :
+    _capacity(another._capacity), _buffer(nullptr), _write_index(another._write_index),
+    _read_index(another._read_index), _input_ended(another._input_ended) {
+    _buffer = new byte[_capacity];
+    for (size_t i = 0; i < _write_index; i++) {
+        _buffer[i] = another._buffer[i];
+    }
+}
+
+ByteStream::~ByteStream() {
+    delete[] _buffer;
+}
+
+ByteStream &ByteStream::operator=(const ByteStream &another) {
+    if (this == &another) {
+        return *this;
+    }
+    delete[] _buffer;
+    _capacity = another._capacity;
+    _buffer = new byte[_capacity];
+    _write_index = another._write_index;
+    _read_index = another._read_index;
+    _input_ended = another._input_ended;
+    for (size_t i = 0; i < _write_index; i++) {
+        _buffer[i] = another._buffer[i];
+    }
+    return *this;
+}
 
 size_t ByteStream::write(const string &data) {
-    DUMMY_CODE(data);
-    return {};
+    size_t len = min(data.size(),remaining_capacity());
+    for (size_t i = 0; i < len; i++) {
+        _buffer[_write_index%_capacity] = data[i];
+        _write_index++;
+    }
+    return len;
 }
 
 //! \param[in] len bytes will be copied from the output side of the buffer
 string ByteStream::peek_output(const size_t len) const {
-    DUMMY_CODE(len);
-    return {};
+    string ret;
+    size_t len_ = min(len,buffer_size());
+    for (size_t i = 0; i < len_; i++) {
+        ret.push_back(_buffer[(_read_index+i)%_capacity]);
+    }
+    return ret;
 }
 
 //! \param[in] len bytes will be removed from the output side of the buffer
-void ByteStream::pop_output(const size_t len) { DUMMY_CODE(len); }
+void ByteStream::pop_output(const size_t len) {
+    size_t len_ = min(len,buffer_size());
+    _read_index += len_;
+}
 
 //! Read (i.e., copy and then pop) the next "len" bytes of the stream
 //! \param[in] len bytes will be popped and returned
 //! \returns a string
 std::string ByteStream::read(const size_t len) {
-    DUMMY_CODE(len);
-    return {};
+    string ret = peek_output(len);
+    pop_output(len);
+    return ret;
 }
 
-void ByteStream::end_input() {}
+void ByteStream::end_input() {
+    _input_ended = true;
+}
 
-bool ByteStream::input_ended() const { return {}; }
+bool ByteStream::input_ended() const {
+    return _input_ended;
+}
 
-size_t ByteStream::buffer_size() const { return {}; }
+size_t ByteStream::buffer_size() const {
+    return _write_index - _read_index;
+}
 
-bool ByteStream::buffer_empty() const { return {}; }
+bool ByteStream::buffer_empty() const {
+    return _write_index == _read_index;
+}
 
-bool ByteStream::eof() const { return false; }
+bool ByteStream::eof() const {
+    return _input_ended && buffer_empty();
+}
 
-size_t ByteStream::bytes_written() const { return {}; }
+size_t ByteStream::bytes_written() const {
+    return _write_index;
+}
 
-size_t ByteStream::bytes_read() const { return {}; }
+size_t ByteStream::bytes_read() const {
+    return _read_index;
+}
 
-size_t ByteStream::remaining_capacity() const { return {}; }
+size_t ByteStream::remaining_capacity() const {
+    return _capacity - buffer_size();
+}

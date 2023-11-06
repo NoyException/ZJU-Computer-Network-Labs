@@ -31,6 +31,8 @@
 //! and learns or replies as necessary.
 class NetworkInterface {
   private:
+    static constexpr uint64_t TTL = 30000;
+    static constexpr uint64_t ARP_TTL = 5000;
     //! Ethernet (known as hardware, network-access-layer, or link-layer) address of the interface
     EthernetAddress _ethernet_address;
 
@@ -39,6 +41,13 @@ class NetworkInterface {
 
     //! outbound queue of Ethernet frames that the NetworkInterface wants sent
     std::queue<EthernetFrame> _frames_out{};
+
+    uint64_t _time{};
+
+    std::unordered_map<uint32_t, std::pair<EthernetAddress, uint64_t>> _map{};
+
+    std::unordered_map<uint32_t, uint64_t> _arp_timestamp{};
+    std::unordered_multimap<uint32_t, InternetDatagram> _arp_cache{};
 
   public:
     //! \brief Construct a network interface with given Ethernet (network-access-layer) and IP (internet-layer) addresses
@@ -61,7 +70,7 @@ class NetworkInterface {
     std::optional<InternetDatagram> recv_frame(const EthernetFrame &frame);
 
     //! \brief Called periodically when time elapses
-    void tick(const size_t ms_since_last_tick);
+    void tick(size_t ms_since_last_tick);
 };
 
 #endif  // SPONGE_LIBSPONGE_NETWORK_INTERFACE_HH

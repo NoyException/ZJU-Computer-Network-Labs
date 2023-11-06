@@ -17,11 +17,29 @@ class ByteStream {
     // that's a sign that you probably want to keep exploring
     // different approaches.
 
+    using byte = char;
+
+    size_t _capacity;  //缓存容量
+
+    byte *_buffer;  //比特流缓存
+
+    size_t _write_index;  //写入索引
+
+    size_t _read_index;  //读取索引
+
+    bool _input_ended;  //输入是否结束
+
     bool _error{};  //!< Flag indicating that the stream suffered an error.
 
   public:
     //! Construct a stream with room for `capacity` bytes.
     ByteStream(const size_t capacity);
+
+    ByteStream(const ByteStream &);
+
+    ~ByteStream();
+
+    ByteStream &operator=(const ByteStream &);
 
     //! \name "Input" interface for the writer
     //!@{
