@@ -21,7 +21,7 @@ ByteStream::ByteStream(const ByteStream &another) :
     _capacity(another._capacity), _buffer(nullptr), _write_index(another._write_index),
     _read_index(another._read_index), _input_ended(another._input_ended) {
     _buffer = new byte[_capacity];
-    for (size_t i = 0; i < _write_index; i++) {
+    for (size_t i = 0; i < _capacity; i++) {
         _buffer[i] = another._buffer[i];
     }
 }

@@ -52,6 +52,7 @@ void Router::route_one_datagram(InternetDatagram &dgram) {
     }
     // 4.路由器减少数据报的TTL（存活时间）。如果TTL已经为零，或者在减少之后达到零，路由器应该丢弃数据报。
     if(dgram.header().ttl <= 1){
+        dgram.header().ttl = 0;
         return;
     }
     dgram.header().ttl--;
