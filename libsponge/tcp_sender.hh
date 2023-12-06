@@ -40,8 +40,7 @@ class TCPSender {
     //! the (absolute) sequence number for the last byte acked
     uint64_t _acked_seqno{0};
 
-    //! number of ticks
-    size_t _ticks{0};
+    size_t _time{0};
 
     size_t _timestamp{0};
 
@@ -108,6 +107,10 @@ class TCPSender {
     //! \brief relative seqno for the next byte to be sent
     WrappingInt32 next_seqno() const { return wrap(_next_seqno, _isn); }
     //!@}
+
+    size_t get_time() const {
+        return _time;
+    }
 };
 
 #endif  // SPONGE_LIBSPONGE_TCP_SENDER_HH

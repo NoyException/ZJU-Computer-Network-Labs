@@ -91,19 +91,25 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
         _window_size = max(_window_size, window_size);
 
     // 只有当对端的ackno大于已经确认的最大序列号时，才会更新已经确认的最大序列号，并更新其它状态
-    if (ackno_absolute <= _acked_seqno)
-        return;
+//    if (ackno_absolute <= _acked_seqno)
+//        return;
 
+    bool updated = false;
     while (!_segments_not_acked.empty()) {
         auto segment = _segments_not_acked.front();
         _acked_seqno = unwrap(segment.header().seqno, _isn, _acked_seqno);
         if (_acked_seqno+segment.length_in_sequence_space() > ackno_absolute)
             break;
         _segments_not_acked.pop();
+        updated = true;
     }
+
+    if(!updated)
+        return;
+
     _acked_seqno = ackno_absolute;
 
-    _timestamp = _ticks;
+    _timestamp = _time;
     _consecutive_retransmissions = 0;
     _retransmission_timeout = _initial_retransmission_timeout;
     _window_size = window_size;
@@ -112,13 +118,13 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
 
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
 void TCPSender::tick(const size_t ms_since_last_tick) {
-    _ticks += ms_since_last_tick;
+    _time += ms_since_last_tick;
     if (_segments_not_acked.empty())
-        _timestamp = _ticks;
+        _timestamp = _time;
     else {
-        if (_ticks - _timestamp >= _retransmission_timeout) {
+        if (_time - _timestamp >= _retransmission_timeout) {
             _segments_out.push(_segments_not_acked.front());
-            _timestamp = _ticks;
+            _timestamp = _time;
             // 如果窗口大小为0，那么就会一直以稳定的速率重传1个字节的数据，以探测对端是否已经恢复
             if(_window_size!=0){
                 _consecutive_retransmissions++;
@@ -133,7 +139,8 @@ unsigned int TCPSender::consecutive_retransmissions() const { return _consecutiv
 void TCPSender::send_empty_segment() {
     TCPSegment segment;
     segment.header().seqno = next_seqno();
-    send_segment(segment);
+    segment.header().ack = true;
+    _segments_out.push(segment);
 }
 
 void TCPSender::send_segment(const TCPSegment &segment) {

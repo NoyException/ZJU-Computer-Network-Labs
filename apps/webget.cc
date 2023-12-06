@@ -1,10 +1,12 @@
-#include "socket.hh"
+#include "tcp_sponge_socket.hh"
 #include "util.hh"
 
 #include <cstdlib>
 #include <iostream>
 
 using namespace std;
+
+#define USING_SPONGE_SOCKET
 
 void get_URL(const string &host, const string &path) {
     // Your code here.
@@ -17,18 +19,26 @@ void get_URL(const string &host, const string &path) {
     // (not just one call to read() -- everything) until you reach
     // the "eof" (end of file).
 
+#ifdef USING_SPONGE_SOCKET
+    FullStackSocket socket;
+#else
     TCPSocket socket;
+#endif
     socket.connect(Address(host, "http"));
     socket.write("GET " + path + " HTTP/1.1\r\n");
     socket.write("Host: " + host + "\r\n");
     socket.write("Connection: close\r\n");
     socket.write("\r\n");
+    socket.shutdown(SHUT_WR);
 
     while(!socket.eof()){
         cout<<socket.read();
     }
 
     socket.close();
+#ifdef USING_SPONGE_SOCKET
+    socket.wait_until_closed();
+#endif
 }
 
 int main(int argc, char *argv[]) {
